@@ -173,7 +173,7 @@ def dropout(input: Tensor, rate: float, ignore: bool = False) -> Tensor:
         tensor with randoom positions dropped out
     """
     # TODO: Implement for Task 4.4.
-    if ignore or rate == None or input.shape == None:
+    if ignore or rate is None or input.shape is None:
         return input
     else:
         return input * (rand(input.shape, backend=input.backend) > rate)
