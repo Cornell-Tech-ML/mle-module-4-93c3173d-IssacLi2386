@@ -6,7 +6,6 @@ from numba import njit, prange
 from .autodiff import Context
 from .tensor import Tensor
 from .tensor_data import (
-    MAX_DIMS,
     Index,
     Shape,
     Strides,
@@ -80,8 +79,21 @@ def _tensor_conv1d(
     s1 = input_strides
     s2 = weight_strides
 
-    # TODO: Implement for Task 4.1.
-    raise NotImplementedError("Need to implement for Task 4.1")
+    for i in prange(out.size):
+        out_index: Index = np.empty(3, np.int32)
+        to_index(i, out_shape, out_index)
+        b_index, o_index, w_index = out_index
+
+        tmp: float = 0
+        for in_ch in range(in_channels):
+            for w in range(kw):
+                wpos = w_index + w if not reverse else w_index - w
+                if 0 <= wpos < width:
+                    tmp += (
+                        input[b_index * s1[0] + in_ch * s1[1] + wpos * s1[2]]
+                        * weight[o_index * s2[0] + in_ch * s2[1] + w * s2[2]]
+                    )
+        out[i] = tmp
 
 
 tensor_conv1d = njit(parallel=True)(_tensor_conv1d)
@@ -203,11 +215,32 @@ def _tensor_conv2d(
     s1 = input_strides
     s2 = weight_strides
     # inners
-    s10, s11, s12, s13 = s1[0], s1[1], s1[2], s1[3]
-    s20, s21, s22, s23 = s2[0], s2[1], s2[2], s2[3]
 
     # TODO: Implement for Task 4.2.
-    raise NotImplementedError("Need to implement for Task 4.2")
+    for i in prange(out.size):
+        out_index: Index = np.empty(4, np.int32)
+        to_index(i, out_shape, out_index)
+        b_index, o_index, h_index, w_index = out_index
+
+        tmp: float = 0
+        for in_ch in range(in_channels):
+            for w in range(kw):
+                for h in range(kh):
+                    wpos = w_index + w if not reverse else w_index - w
+                    hpos = h_index + h if not reverse else h_index - h
+                    if 0 <= wpos < width and 0 <= hpos < height:
+                        tmp += (
+                            input[
+                                b_index * s1[0]
+                                + in_ch * s1[1]
+                                + hpos * s1[2]
+                                + wpos * s1[3]
+                            ]
+                            * weight[
+                                o_index * s2[0] + in_ch * s2[1] + h * s2[2] + w * s2[3]
+                            ]
+                        )
+        out[i] = tmp
 
 
 tensor_conv2d = njit(parallel=True, fastmath=True)(_tensor_conv2d)
